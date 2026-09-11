@@ -5,16 +5,16 @@ def get_tipo_ingresos():
     try:
         cursor = conn.cursor()
 
-        query = "SELECT COD_TIP_INGRESO, NOM_INGRESO, TIP_COBRO, USO_ACTIVO, CAMPO_ESPECIFICO FROM Ingresos_Clase"
+        query = "SELECT COD_TIP_INGRESO, NOM_INGRESO, forma_ingreso FROM ingresos"
        
         cursor.execute(query)
         rows = cursor.fetchall()
 
-        return [{"codTipIngreso": row["COD_TIP_INGRESO"], "nomIngreso": row["NOM_INGRESO"], "tipCobro": row["TIP_COBRO"],
-                  "usoActivo": row["USO_ACTIVO"], "campoEsp": row["CAMPO_ESPECIFICO"]} for row in rows]
+        return [{"codTipIngreso": row["cod_tip_ingreso"], "nomIngreso": row["nom_ingreso"], "fromIngreso": row["forma_ingreso"]} for row in rows]
     finally:
         conn.close()
 
+#Hay que corregir este servicio
 def insert_ingresos_service(data, cod_cliente):
     activos = data.get("activos", [])
 
@@ -25,14 +25,8 @@ def insert_ingresos_service(data, cod_cliente):
     try:
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT cod_activo FROM Activos ORDER BY cod_activo DESC LIMIT 1"
-        )
-        row = cursor.fetchone()
-        cod_activo = int(row["cod_activo"]) if row else 0
-
         sql = """
-            INSERT INTO Activos
+            INSERT INTO activos_clientes
             (cod_activo, cod_cliente, nom_activo, tip_activo, coste_activo, vida_util, fec_compra)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """

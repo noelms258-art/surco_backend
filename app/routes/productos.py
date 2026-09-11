@@ -13,6 +13,7 @@ def get_productos(clas_prod):
 
 
 @productos_bp.route("/clases", methods=["GET"])
+@jwt_required()
 def get_clases():
     clases = get_clases_producto()
     return jsonify(clases)

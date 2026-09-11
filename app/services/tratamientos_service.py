@@ -10,16 +10,10 @@ def insert_tratamientos_service(tratamientos, campo, cod_cliente):
     try:
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT COD_TRATAMIENTO FROM Tratamientos ORDER BY COD_TRATAMIENTO DESC LIMIT 1"
-        )
-        row = cursor.fetchone()
-        cod_trat = row["COD_TRATAMIENTO"] if row else 0
-
         sql = """
             INSERT INTO Tratamientos
-            (COD_TRATAMIENTO, COD_GASTO_PROD, COD_PRODUCTO, CANTIDAD, COD_CAMPO, FECHA, COD_CLIENTE)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (COD_GASTO, COD_PRODUCTO, cant_trata, COD_CAMPO, fec_trata, COD_CLIENTE)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
 
         params = []
@@ -32,11 +26,8 @@ def insert_tratamientos_service(tratamientos, campo, cod_cliente):
             dt = datetime.fromisoformat(trat.get("fechaTrat").replace("Z", "+00:00"))
             fecha_formateada = dt.strftime("%d/%m/%Y")
 
-            cod_trat += 1
-
             params.append(
                 (
-                    cod_trat,
                     None,
                     trat.get("codProd"),
                     float(trat.get("cantTrat")),
@@ -52,7 +43,6 @@ def insert_tratamientos_service(tratamientos, campo, cod_cliente):
         return {
             "ok": True,
             "insertados": len(params),
-            "ultimoCodTratamiento": cod_trat,
         }
 
     except:

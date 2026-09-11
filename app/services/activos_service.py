@@ -6,13 +6,13 @@ def get_tipo_activos_servcice():
     try:
         cursor = conn.cursor()
 
-        query = "SELECT COD_TIPO_ACTIVO, NOM_ACTIVO FROM Tipo_Activos"
+        query = "SELECT COD_TIPO_ACTIVO, tipo_activo FROM activos"
 
         cursor.execute(query)
         rows = cursor.fetchall()
 
         return [
-            {"codTipActivo": row["COD_TIPO_ACTIVO"], "nomActivo": row["NOM_ACTIVO"]}
+            {"codTipActivo": row["cod_tipo_activo"], "nomActivo": row["tipo_activo"]}
             for row in rows
         ]
     finally:
@@ -29,16 +29,11 @@ def insert_activos_servicio(data, cod_cliente):
     try:
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT cod_activo FROM Activos ORDER BY cod_activo DESC LIMIT 1"
-        )
-        row = cursor.fetchone()
-        cod_activo = int(row["cod_activo"]) if row else 0
 
         sql = """
-            INSERT INTO Activos
-            (cod_activo, cod_cliente, nom_activo, tip_activo, coste_activo, vida_util, fec_compra)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO activos_clientes
+            (cod_cliente, nom_activo, cod_tipo_activo, coste, vida_util, fec_compra)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
 
         params = []
@@ -46,10 +41,8 @@ def insert_activos_servicio(data, cod_cliente):
             if activo.get("codTipActivo") is None:
                 raise ValueError("Cada compra debe llevar un activo")
 
-            cod_activo += 1
             params.append(
                 (
-                    cod_activo,
                     cod_cliente,
                     activo.get("nomActivo"),
                     activo.get("codTipActivo"),
@@ -65,7 +58,6 @@ def insert_activos_servicio(data, cod_cliente):
         return {
             "ok": True,
             "insertados": len(params),
-            "ultimoCodGasto": cod_activo,
         }
     except:
         conn.rollback()

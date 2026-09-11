@@ -20,11 +20,13 @@ def insert_gastos_argicolas():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @gastos_bp.route("/<tip_gasto>/claseGasto", methods=["GET"])
+@jwt_required()
 def gastos_clase(tip_gasto):
     gastos_clases = get_gasto_by_tipo(tip_gasto)
     return jsonify(gastos_clases)
 
 @gastos_bp.route("/<clas_gasto>/gastos", methods=["GET"])
+@jwt_required()
 def get_productos(clas_gasto):
     gastos = get_gasto_by_clase(clas_gasto)
     return jsonify(gastos)

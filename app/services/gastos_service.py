@@ -11,16 +11,10 @@ def insert_gastos_agricolas(data, cod_cliente):
     try:
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT COD_GASTO FROM Gastos_Producto ORDER BY COD_GASTO DESC LIMIT 1"
-        )
-        row = cursor.fetchone()
-        cod_gasto = row["COD_GASTO"] if row else 0
-
         sql = """
-            INSERT INTO Gastos_Producto
-            (COD_GASTO, COD_CAMPO, COD_PRODUCTO, COD_EMPLEADO, HORAS, IMPORTE, CANTIDAD, FECHA_GASTO)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO gastos_productos
+            (cod_producto, cod_cliente, unidades_prod, imp_ud_prod, imp_total_prod, cod_campo, fec_compra, uds_consumido)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         params = []
@@ -28,17 +22,16 @@ def insert_gastos_agricolas(data, cod_cliente):
             if gasto.get("codProd") is None:
                 raise ValueError("Cada gasto debe tener un producto")
 
-            cod_gasto += 1
             params.append(
                 (
-                    cod_gasto,
-                    None,
                     gasto.get("codProd"),
                     cod_cliente,
-                    None,
-                    float(gasto.get("txtImp")),
                     int(gasto.get("txtUnd")),
+                    float(gasto.get("txtImp")),
+                    int(gasto.get("txtUnd")) * float(gasto.get("txtImp")) ,
+                    None,
                     gasto.get("fechaGast"),
+                    None
                 )
             )
 
@@ -48,7 +41,6 @@ def insert_gastos_agricolas(data, cod_cliente):
         return {
             "ok": True,
             "insertados": len(params),
-            "ultimoCodGasto": cod_gasto,
         }
     except:
         conn.rollback()
@@ -62,17 +54,17 @@ def get_gasto_by_tipo(tip_gasto):
     try:
         cursor = conn.cursor()
 
-        query = "SELECT DISTINCT CLASS_GASTO FROM Gastos_Clase"
+        query = "SELECT DISTINCT CLASS_GASTO FROM gastos"
         params = []
 
         if tip_gasto != "none":
-            query += " WHERE TIP_GASTO = ?"
+            query += " WHERE TIP_GASTO = %s"
             params.append(tip_gasto)
 
         cursor.execute(query, params)
         rows = cursor.fetchall()
 
-        return [{"classGasto": row["CLASS_GASTO"]} for row in rows]
+        return [{"classGasto": row["class_gasto"]} for row in rows]
     finally:
         conn.close()
 
@@ -82,18 +74,18 @@ def get_gasto_by_clase(clas_gasto):
     try:
         cursor = conn.cursor()
 
-        query = "SELECT COD_TIP_GASTO, NOM_GASTO FROM Gastos_Clase"
+        query = "SELECT COD_TIP_GASTO, NOM_GASTO FROM gastos"
         params = []
 
         if clas_gasto != "none":
-            query += " WHERE CLASS_GASTO = ?"
+            query += " WHERE CLASS_GASTO = %s"
             params.append(clas_gasto)
 
         cursor.execute(query, params)
         rows = cursor.fetchall()
 
         return [
-            {"codTipGasto": row["COD_TIP_GASTO"], "nomGasto": row["NOM_GASTO"]}
+            {"codTipGasto": row["cod_tip_gasto"], "nomGasto": row["nom_gasto"]}
             for row in rows
         ]
     finally:
@@ -110,14 +102,10 @@ def insert_gasto(data, cod_cliente):
     try:
         cursor = conn.cursor()
 
-        cursor.execute("SELECT COD_GASTO FROM Gastos ORDER BY COD_GASTO DESC LIMIT 1")
-        row = cursor.fetchone()
-        cod_gasto = int(row["COD_GASTO"]) if row else 0
-
         sql = """
-           INSERT INTO Gastos
-            (cod_gasto, cod_tip_gasto, cod_cliente, tipo, subtipo, unidades, horas, importe, cod_campo, fecha, consumido, importe_total)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+           INSERT INTO gastos_cliente
+            (cod_tip_gasto, cod_cliente, unidades, horas, imp_gasto, cod_campo, fec_gasto, consumido)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
         """
 
         params = []
@@ -125,49 +113,38 @@ def insert_gasto(data, cod_cliente):
             if gasto.get("codTipGasto") is None:
                 raise ValueError("Cada gasto debe tener un gasto")
 
-            cod_gasto += 1
             if data.get("cantidad") in (None, ""):
                 params.append(
                     (
-                        str(cod_gasto),
                         gasto.get("codTipGasto"),
-                        cod_cliente,  # Aqui falta el cliente que inserta el gasto
-                        None,
-                        None,
+                        cod_cliente,
                         None,
                         None,
                         float(gasto.get("txtImp")),
                         gasto.get("codCampo"),
                         gasto.get("fechaGast"),
                         None,
-                        float(gasto.get("txtImp")),
-                    )
+                    ),
                 )
             else:
                 params.append(
                     (
-                        str(cod_gasto),
                         gasto.get("codTipGasto"),
-                        cod_cliente,  # Aqui falta el cliente que inserta el gasto
-                        None,
-                        None,
+                        cod_cliente,
                         int(gasto.get("txtUnd")),
                         None,
                         float(gasto.get("txtImp")),
                         gasto.get("codCampo"),
                         gasto.get("fechaGast"),
                         None,
-                        int(gasto.get("txtUnd")) * float(gasto.get("txtImp")),
                     )
                 )
-
         cursor.executemany(sql, params)
         conn.commit()
 
         return {
             "ok": True,
             "insertados": len(params),
-            "ultimoCodGasto": cod_gasto,
         }
     except:
         conn.rollback()

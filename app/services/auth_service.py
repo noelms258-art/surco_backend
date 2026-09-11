@@ -14,7 +14,7 @@ def login_usuario(email, password):
             email,
             contra
         FROM Usuarios
-        WHERE email = ?
+        WHERE email = %s
         ''',
         (email,)
     ).fetchone()

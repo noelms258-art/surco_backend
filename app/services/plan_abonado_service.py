@@ -25,9 +25,9 @@ def get_plan_abonado_service(params):
     cursor.execute(
         "select (CASE MES WHEN 1 THEN 'Enero' WHEN 2 THEN 'Febrero' WHEN 3 THEN 'Marzo' WHEN 4 THEN 'Abril' WHEN 5 THEN 'Mayo' WHEN 6 THEN 'Junio' WHEN 7 THEN 'Julio'"
         " WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Septiembre' WHEN 10 THEN 'Octubre' WHEN 11 THEN 'Noviembre' WHEN 12 THEN 'Diciembre' END) AS MES,"
-        " MACRO_P, MACRO_N, MACRO_K, MACRO_CA, MICRO_FE, MICRO_ZN, MICRO_MN, MICRO_CU"
+        " MACRO_PH, MACRO_N, MACRO_K, MACRO_CA, MICRO_FE, MICRO_ZN, MICRO_MN, MICRO_CU"
         " from Plan_Abonado"
-        " where COD_CAMPO = ? and EJERCICIO = ?",
+        " where COD_CAMPO = %s and EJERCICIO = %s",
         params,
     )
     rows = cursor.fetchall()
@@ -48,10 +48,10 @@ def get_plan_abonado_service(params):
 
     cursor.execute(
         "select (CASE pl.MES WHEN 1 THEN 'Enero' WHEN 2 THEN 'Febrero' WHEN 3 THEN 'Marzo' WHEN 4 THEN 'Abril' WHEN 5 THEN 'Mayo' WHEN 6 THEN 'Junio' WHEN 7 THEN 'Julio'"
-        " WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Septiembre' WHEN 10 THEN 'Octubre' WHEN 11 THEN 'Noviembre' WHEN 12 THEN 'Diciembre' END) AS MES , p.NOM_PRODUCTO, pl.CANTIDAD"
+        " WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Septiembre' WHEN 10 THEN 'Octubre' WHEN 11 THEN 'Noviembre' WHEN 12 THEN 'Diciembre' END) AS MES , p.NOM_PRODUCTO, pl.cant_abonado"
         " from Productos_plan pl"
-        " join Productos p on p.COD_PRODUCTO = pl.COD_PROD"
-        " where pl.COD_CAMPO = ? and pl.EJERCICIO = ?",
+        " join Productos p on p.COD_PRODUCTO = pl.cod_producto"
+        " where pl.COD_CAMPO = %s and pl.EJERCICIO = %s",
         params,
     )
     rows = cursor.fetchall()
@@ -95,10 +95,10 @@ def calcular_nutrientes_desde_productos(cursor, prods):
     }
 
     sql_nutrientes_producto = """
-        SELECT MACRO_P, MACRO_N, MACRO_K, MACRO_CA,
+        SELECT MACRO_PH, MACRO_N, MACRO_K, MACRO_CA,
                MICRO_FE, MICRO_ZN, MICRO_MN, MICRO_CU
         FROM Productos
-        WHERE COD_PRODUCTO = ?
+        WHERE COD_PRODUCTO = %s
     """
 
     for prod in prods:
@@ -130,26 +130,19 @@ def insert_plan_abonado_service(data):
     cod_campo = data.get("codCampo", "")
 
     try:
-        select = "SELECT COD_ABONADO FROM Plan_Abonado ORDER BY COD_ABONADO DESC LIMIT 1"
-        cursor.execute(select)
-        row = cursor.fetchone()
-        cod_plan = int(row[0]) if row and row[0] is not None else 0
-        cod_plan += 1
-
         sql = """
-            INSERT INTO Plan_Abonado (
-                COD_ABONADO, COD_CAMPO, EJERCICIO, MES, COD_PRODUCTO, CANTIDAD,
-                MACRO_P, MACRO_N, MACRO_K, MACRO_CA,
+            INSERT INTO Plan_Abonado (COD_CAMPO, EJERCICIO, MES, COD_PRODUCTO, cant_abonado,
+                MACRO_PH, MACRO_N, MACRO_K, MACRO_CA,
                 MICRO_FE, MICRO_ZN, MICRO_MN, MICRO_CU
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         sqlProds = """
             INSERT INTO Productos_plan (
-                COD_ABONADO, COD_CAMPO, COD_PROD, MES, EJERCICIO, CANTIDAD
+                COD_CAMPO, COD_PROD, MES, EJERCICIO, CANTIDAD
             )
-            VALUES (?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """
 
         insertados = 0
@@ -174,7 +167,6 @@ def insert_plan_abonado_service(data):
             # Insertar productos del mes
             for prod in prods:
                 paramsProd = (
-                    cod_plan,
                     cod_campo,
                     prod.get("codProd"),
                     mes_num,
@@ -188,7 +180,6 @@ def insert_plan_abonado_service(data):
                 nutrs = calcular_nutrientes_desde_productos(cursor, prods)
 
             params = (
-                cod_plan,
                 cod_campo,
                 ejer,
                 mes_num,
@@ -208,7 +199,7 @@ def insert_plan_abonado_service(data):
             insertados += 1
 
         conn.commit()
-        return {"ok": True, "insertados": insertados, "IdPlan": cod_plan}, 201
+        return {"ok": True, "insertados": insertados}, 201
 
     except Exception as e:
         conn.rollback()

@@ -16,6 +16,7 @@ def get_user_campos():
 
 
 @usuarios_bp.route("/<user_name>/empleados", methods=["GET"])
+@jwt_required()
 def get_empleados(user_name):
     empleados = get_empleados_by_user(user_name)
     return jsonify(empleados)

@@ -6,6 +6,7 @@ activos_bp = Blueprint("activos", __name__, url_prefix="/surco")
 
 
 @activos_bp.route("/activos", methods=["GET"])
+@jwt_required()
 def get_tipo_activos():
     activos = get_tipo_activos_servcice()
     return jsonify(activos)

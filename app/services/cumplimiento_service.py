@@ -13,30 +13,30 @@ def get_cumplimiento_resumen_service(cod_campo):
     )
 
     cursor.execute(
-        "select MACRO_P + MACRO_N + MACRO_K + MACRO_CA + MICRO_FE + MICRO_ZN + MICRO_MN + MICRO_CU AS total_mensual from Plan_Abonado where COD_CAMPO = ? and MES = ? and EJERCICIO = ?",
+        "select MACRO_PH + MACRO_N + MACRO_K + MACRO_CA + MICRO_FE + MICRO_ZN + MICRO_MN + MICRO_CU AS total_mensual from Plan_Abonado where COD_CAMPO = %s and MES = %s and EJERCICIO = %s",
         params,
     )
     row = cursor.fetchone()
     total_mensual = row[0] if row else 0
 
     cursor.execute(
-        "select sum(MACRO_P) + sum(MACRO_N) + sum(MACRO_K) + sum(MACRO_CA) + sum(MICRO_FE) + sum(MICRO_ZN) + sum(MICRO_MN) + sum(MICRO_CU) AS total_anual from Plan_Abonado where COD_CAMPO = ? and EJERCICIO = ?",
+        "select sum(MACRO_PH) + sum(MACRO_N) + sum(MACRO_K) + sum(MACRO_CA) + sum(MICRO_FE) + sum(MICRO_ZN) + sum(MICRO_MN) + sum(MICRO_CU) AS total_anual from Plan_Abonado where COD_CAMPO = %s and EJERCICIO = %s",
         param_year,
     )
     row = cursor.fetchone()
     total_anual = row[0] if row else 0
 
     cursor.execute(
-        "select (p.MACRO_P * t.cantidad + MACRO_N * t.cantidad + MACRO_K * t.cantidad + MACRO_CA * t.cantidad + MICRO_FE * t.cantidad + MICRO_ZN * t.cantidad + MICRO_MN * t.cantidad + MICRO_CU * t.cantidad) AS gasto "
-        "from Tratamientos t, Productos p where t.COD_PRODUCTO = p.COD_PRODUCTO and t.COD_CAMPO = ? and CAST(SUBSTR(t.FECHA, 4, 2) AS INTEGER) = ? and CAST(substr(t.FECHA, -4) AS INTEGER) = ?",
+        "select (p.MACRO_PH * t.cant_abonado + MACRO_N * t.cant_abonado + MACRO_K * t.cant_abonado + MACRO_CA * t.cant_abonado + MICRO_FE * t.cant_abonado + MICRO_ZN * t.cant_abonado + MICRO_MN * t.cant_abonado + MICRO_CU * t.cant_abonado) AS gasto "
+        "from Tratamientos t, Productos p where t.COD_PRODUCTO = p.COD_PRODUCTO and t.COD_CAMPO = %s and CAST(SUBSTR(t.fec_trata, 4, 2) AS INTEGER) = %s and CAST(substr(t.fec_trata, -4) AS INTEGER) = %s",
         params,
     )
     row = cursor.fetchone()
     gasto_mensual = row[0] if row else 0
 
     cursor.execute(
-        "select (p.MACRO_P * t.cantidad + MACRO_N * t.cantidad + MACRO_K * t.cantidad + MACRO_CA * t.cantidad + MICRO_FE * t.cantidad + MICRO_ZN * t.cantidad + MICRO_MN * t.cantidad + MICRO_CU * t.cantidad) AS gasto "
-        "from Tratamientos t, Productos p where t.COD_PRODUCTO = p.COD_PRODUCTO and COD_CAMPO = ? and CAST(substr(t.FECHA, -4) AS INTEGER) = ?",
+        "select (p.MACRO_PH * t.cant_abonado + MACRO_N * t.cant_abonado + MACRO_K * t.cant_abonado + MACRO_CA * t.cant_abonado + MICRO_FE * t.cant_abonado + MICRO_ZN * t.cant_abonado + MICRO_MN * t.cant_abonado + MICRO_CU * t.cant_abonado) AS gasto "
+        "from Tratamientos t, Productos p where t.COD_PRODUCTO = p.COD_PRODUCTO and COD_CAMPO = %s and CAST(substr(t.fec_trata, -4) AS INTEGER) = %s",
         param_year,
     )
     row = cursor.fetchone()
@@ -56,7 +56,7 @@ def get_cumplimiento_total_service(cod_campo):
     params = (cod_campo, datetime.now().year)
     cursor.execute(
         "select MES, "
-        "COALESCE(MACRO_P, 0) + "
+        "COALESCE(MACRO_PH, 0) + "
         "COALESCE(MACRO_N, 0) + "
         "COALESCE(MACRO_K, 0) + "
         "COALESCE(MACRO_CA, 0) + "
@@ -65,7 +65,7 @@ def get_cumplimiento_total_service(cod_campo):
         "COALESCE(MICRO_MN, 0) + "
         "COALESCE(MICRO_CU, 0) AS total_mensual "
         "FROM Plan_Abonado "
-        "WHERE COD_CAMPO = ? AND EJERCICIO = ?;",
+        "WHERE COD_CAMPO = %s AND EJERCICIO = %s;",
         params,
     )
     rows = cursor.fetchall()
@@ -74,18 +74,18 @@ def get_cumplimiento_total_service(cod_campo):
     cursor.execute(
         "select CAST(SUBSTR(t.FECHA, 4, 2) AS INTEGER) AS mes, "
         "SUM("
-        "COALESCE(p.MACRO_P,0) * t.CANTIDAD + "
-        "COALESCE(p.MACRO_N,0) * t.CANTIDAD + "
-        "COALESCE(p.MACRO_K,0) * t.CANTIDAD + "
-        "COALESCE(p.MACRO_CA,0) * t.CANTIDAD + "
-        "COALESCE(p.MICRO_FE,0) * t.CANTIDAD + "
-        "COALESCE(p.MICRO_ZN,0) * t.CANTIDAD + "
-        "COALESCE(p.MICRO_MN,0) * t.CANTIDAD + "
-        "COALESCE(p.MICRO_CU,0) * t.CANTIDAD"
+        "COALESCE(p.MACRO_PH,0) * t.cant_abonado + "
+        "COALESCE(p.MACRO_N,0) * t.cant_abonado + "
+        "COALESCE(p.MACRO_K,0) * t.cant_abonado + "
+        "COALESCE(p.MACRO_CA,0) * t.cant_abonado + "
+        "COALESCE(p.MICRO_FE,0) * t.cant_abonado + "
+        "COALESCE(p.MICRO_ZN,0) * t.cant_abonado + "
+        "COALESCE(p.MICRO_MN,0) * t.cant_abonado + "
+        "COALESCE(p.MICRO_CU,0) * t.cant_abonado"
         ") AS gasto "
         "from Tratamientos t "
         "join Productos p on t.COD_PRODUCTO = p.COD_PRODUCTO "
-        "where t.COD_CAMPO = ? and CAST(SUBSTR(t.FECHA, -4) AS INTEGER) = ? "
+        "where t.COD_CAMPO = %s and CAST(SUBSTR(t.FECHA, -4) AS INTEGER) = %s "
         "group by mes "
         "order by mes",
         params,
@@ -138,32 +138,32 @@ def get_cumplimiento_macros_service(cod_campo):
     cursor.execute(
         """
         SELECT
-            pl.MACRO_P,
-            COALESCE(SUM(COALESCE(p.MACRO_P, 0) * COALESCE(t.CANTIDAD, 0)), 0),
+            pl.MACRO_PH,
+            COALESCE(SUM(COALESCE(p.MACRO_PH, 0) * COALESCE(t.cant_abonado, 0)), 0),
             pl.MACRO_N,
-            COALESCE(SUM(COALESCE(p.MACRO_N, 0) * COALESCE(t.CANTIDAD, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MACRO_N, 0) * COALESCE(t.cant_abonado, 0)), 0),
             pl.MACRO_K,
-            COALESCE(SUM(COALESCE(p.MACRO_K, 0) * COALESCE(t.CANTIDAD, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MACRO_K, 0) * COALESCE(t.cant_abonado, 0)), 0),
             pl.MACRO_CA,
-            COALESCE(SUM(COALESCE(p.MACRO_CA, 0) * COALESCE(t.CANTIDAD, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MACRO_CA, 0) * COALESCE(t.cant_abonado, 0)), 0),
             pl.MICRO_FE,
-            COALESCE(SUM(COALESCE(p.MICRO_FE, 0) * COALESCE(t.CANTIDAD, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MICRO_FE, 0) * COALESCE(t.cant_abonado, 0)), 0),
             pl.MICRO_ZN,
-            COALESCE(SUM(COALESCE(p.MICRO_ZN, 0) * COALESCE(t.CANTIDAD, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MICRO_ZN, 0) * COALESCE(t.cant_abonado, 0)), 0),
             pl.MICRO_MN,
-            COALESCE(SUM(COALESCE(p.MICRO_MN, 0) * COALESCE(t.CANTIDAD, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MICRO_MN, 0) * COALESCE(t.cant_abonado, 0)), 0),
             pl.MICRO_CU,
-            COALESCE(SUM(COALESCE(p.MICRO_CU, 0) * COALESCE(t.CANTIDAD, 0)), 0)
+            COALESCE(SUM(COALESCE(p.MICRO_CU, 0) * COALESCE(t.cant_abonado, 0)), 0)
         FROM Plan_Abonado pl
         LEFT JOIN Tratamientos t ON t.COD_CAMPO = pl.COD_CAMPO
-            AND CAST(SUBSTR(t.FECHA, 4, 2) AS INTEGER) = ?
-            AND CAST(SUBSTR(t.FECHA, -4) AS INTEGER) = ?
+            AND CAST(SUBSTR(t.fec_trata, 4, 2) AS INTEGER) = %s
+            AND CAST(SUBSTR(t.fec_trata, -4) AS INTEGER) = %s
         LEFT JOIN Productos p ON t.COD_PRODUCTO = p.COD_PRODUCTO
-        WHERE pl.COD_CAMPO = ?
-            AND pl.EJERCICIO = ?
-            AND pl.MES = ?
+        WHERE pl.COD_CAMPO = %s
+            AND pl.EJERCICIO = %s
+            AND pl.MES = %s
         GROUP BY
-            pl.MACRO_P,
+            pl.MACRO_PH,
             pl.MACRO_N,
             pl.MACRO_K,
             pl.MACRO_CA,
@@ -211,21 +211,21 @@ def get_cumplimiento_productos_service(cod_campo):
     cursor.execute(
         """
         SELECT
-            pp.COD_PROD,
+            pp.cod_producto,
             p.NOM_PRODUCTO,
             pp.CANTIDAD AS OBJETIVO,
             COALESCE(SUM(t.CANTIDAD), 0) AS CUMPLIMIENTO
         FROM Productos_plan pp
-        JOIN Productos p ON p.COD_PRODUCTO = pp.COD_PROD
+        JOIN Productos p ON p.COD_PRODUCTO = pp.cod_producto
         LEFT JOIN Tratamientos t ON t.COD_CAMPO = pp.COD_CAMPO
-            AND t.COD_PRODUCTO = pp.COD_PROD
-            AND CAST(SUBSTR(t.FECHA, 4, 2) AS INTEGER) = ?
-            AND CAST(SUBSTR(t.FECHA, -4) AS INTEGER) = ?
-        WHERE pp.COD_CAMPO = ?
-            AND pp.EJERCICIO = ?
-            AND pp.MES = ?
+            AND t.COD_PRODUCTO = pp.cod_producto
+            AND CAST(SUBSTR(t.fec_trata, 4, 2) AS INTEGER) = %s
+            AND CAST(SUBSTR(t.fec_trata, -4) AS INTEGER) = %s
+        WHERE pp.COD_CAMPO = %s
+            AND pp.EJERCICIO = %s
+            AND pp.MES = %s
         GROUP BY
-            pp.COD_PROD,
+            pp.cod_producto,
             p.NOM_PRODUCTO,
             pp.CANTIDAD
         """,

@@ -8,5 +8,5 @@ def get_tareas_service():
     rows = cursor.fetchall()
 
     return [
-        {"codTarea": row["COD_TAREA"], "nomTarea": row["NOM_TAREA"]} for row in rows
+        {"codTarea": row["cod_tarea"], "nomTarea": row["nom_tarea"]} for row in rows
     ]

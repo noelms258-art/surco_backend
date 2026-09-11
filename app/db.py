@@ -1,10 +1,15 @@
-import sqlite3
+import os
+import psycopg
+
+from dotenv import load_dotenv
+from psycopg.rows import dict_row
 
 
-DATABASE_NAME = "BBDD.db"
+load_dotenv()
 
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return psycopg.connect(
+        os.getenv("DATABASE_URL"),
+        row_factory=dict_row
+    )
