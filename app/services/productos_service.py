@@ -42,7 +42,7 @@ def get_producto_user_service(cod_cliente):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT p.NOM_PRODUCTO, p.COD_PRODUCTO, gp.unidades  FROM gastos_cliente gp, Productos p WHERE gp.cod_producto = p.cod_producto "
+            "SELECT gp.COD_PRODUCTO, p.NOM_PRODUCTO, sum(gp.unidades) as unidades  FROM gastos_cliente gp, Productos p WHERE gp.cod_producto = p.cod_producto "
             "AND gp.cod_cliente = %s AND gp.unidades >= 1 GROUP BY gp.COD_PRODUCTO, p.NOM_PRODUCTO"
         , params)
         rows = cursor.fetchall()

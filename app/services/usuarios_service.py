@@ -8,7 +8,7 @@ def get_campos_by_user(cod_cliente):
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT t.COD_CAMPO, t.NOM_CAMPO, t.superficie, t.NUM_ARBOLES, f.NOM_FRUTA,
+            SELECT t.COD_CAMPO, t.NOM_CAMPO, t.superficie, sum(ec.NUM_ARBOLES) as num_arboles, STRING_AGG(f.nom_fruta, ' - ' ORDER BY f.nom_fruta) AS nom_fruta,
             CASE 
             WHEN EXISTS (
                 SELECT 1
@@ -18,8 +18,9 @@ def get_campos_by_user(cod_cliente):
             ) THEN 1
             ELSE 0
             END AS TIENE_PLAN
-            FROM explotaciones t, cultivo f
-            WHERE f.cod_fruta = t.cod_fruta and t.cod_cliente = %s
+            FROM explotaciones t, cultivo f, explotaciones_cultivos ec
+            WHERE f.cod_fruta = ec.cod_fruta and t.cod_campo = ec.cod_campo and t.cod_cliente = %s
+            GROUP BY t.cod_campo, t.nom_campo, t.superficie
             """,
             (params),
         )
