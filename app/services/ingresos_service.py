@@ -5,47 +5,69 @@ def get_tipo_ingresos():
     try:
         cursor = conn.cursor()
 
-        query = "SELECT COD_TIP_INGRESO, NOM_INGRESO, forma_ingreso FROM ingresos"
+        query = "SELECT COD_TIP_INGRESO, NOM_INGRESO, forma_ingreso, iva FROM ingresos"
        
         cursor.execute(query)
         rows = cursor.fetchall()
 
-        return [{"codTipIngreso": row["cod_tip_ingreso"], "nomIngreso": row["nom_ingreso"], "fromIngreso": row["forma_ingreso"]} for row in rows]
+        return [{"codTipIngreso": row["cod_tip_ingreso"], "nomIngreso": row["nom_ingreso"], "fromIngreso": row["forma_ingreso"], "iva": row["iva"]} for row in rows]
     finally:
         conn.close()
 
 #Hay que corregir este servicio
 def insert_ingresos_service(data, cod_cliente):
-    activos = data.get("activos", [])
+    ingresos = data.get("ingresos", [])
 
-    if not isinstance(activos, list) or len(activos) == 0:
-        raise ValueError("activos debe ser una lista con al menos 1 elemento")
+    if not isinstance(ingresos, list) or len(ingresos) == 0:
+        raise ValueError("ingresos debe ser una lista con al menos 1 elemento")
 
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
 
         sql = """
-            INSERT INTO activos_clientes
-            (cod_activo, cod_cliente, nom_activo, tip_activo, coste_activo, vida_util, fec_compra)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO ingresos_clientes
+            (cod_tip_ingreso, cod_campo, kg_ingreso, imp_ingreso, total_bruto, iva, total_neto, fec_ingreso, estimado, cod_fruta, cod_cliente)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         params = []
-        for activo in activos:
-            if activo.get("codTipActivo") is None:
+        for ingreso in ingresos:
+            if ingreso.get("codTipIngreso") is None:
                 raise ValueError("Cada compra debe llevar un activo")
 
-            cod_activo += 1
+            tip_cobro = ingreso.get("tipCobro") or ""
+
+            kg_ingreso = None
+            imp_ingreso = None
+            total_bruto = None
+            cod_campo = None
+
+            if "C" in tip_cobro:
+                cod_campo = ingreso.get("codCampo")
+
+            if "K" in tip_cobro:
+                kg_ingreso = float(ingreso.get("txtKgs") or 0)
+                imp_ingreso = float(ingreso.get("txtImpKgs") or 0)
+                total_bruto = kg_ingreso * imp_ingreso
+            elif "H" in tip_cobro:
+                total_bruto = float(ingreso.get("txtHoras") or 0) * float(ingreso.get("txtImpHoras") or 0)
+            elif "I" in tip_cobro:
+                total_bruto = float(ingreso.get("txtImporte") or 0)
+            
             params.append(
                 (
-                    cod_activo,
-                    cod_cliente,
-                    activo.get("nomActivo"),
-                    activo.get("codTipActivo"),
-                    float(activo.get("txtImp")),
-                    int(activo.get("txtVidaUtil")),
-                    activo.get("fechaActivo"),
+                    ingreso.get("codTipIngreso"),
+                    cod_campo,
+                    kg_ingreso,
+                    imp_ingreso if imp_ingreso is not None else total_bruto,
+                    total_bruto,
+                    None,
+                    None,
+                    ingreso.get("fecIngreso"),
+                    None,
+                    None,
+                    cod_cliente
                 )
             )
 
@@ -55,7 +77,6 @@ def insert_ingresos_service(data, cod_cliente):
         return {
             "ok": True,
             "insertados": len(params),
-            "ultimoCodGasto": cod_activo,
         }
     except:
         conn.rollback()

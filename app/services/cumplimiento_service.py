@@ -53,45 +53,79 @@ def get_cumplimiento_resumen_service(cod_campo):
 def get_cumplimiento_total_service(cod_campo):
     conn = get_db_connection()
     cursor = conn.cursor()
-    params = (cod_campo, datetime.now().year)
+
+    ejercicio = datetime.now().year
+    params = (cod_campo, ejercicio)
     cursor.execute(
-        "select MES, "
-        "COALESCE(MACRO_PH, 0) + "
-        "COALESCE(MACRO_N, 0) + "
-        "COALESCE(MACRO_K, 0) + "
-        "COALESCE(MACRO_CA, 0) + "
-        "COALESCE(MICRO_FE, 0) + "
-        "COALESCE(MICRO_ZN, 0) + "
-        "COALESCE(MICRO_MN, 0) + "
-        "COALESCE(MICRO_CU, 0) AS total_mensual "
-        "FROM Plan_Abonado "
-        "WHERE COD_CAMPO = %s AND EJERCICIO = %s;",
+        """
+        SELECT MES,
+               COALESCE(MACRO_PH, 0),
+               COALESCE(MACRO_N, 0),
+               COALESCE(MACRO_K, 0),
+               COALESCE(MACRO_CA, 0),
+               COALESCE(MICRO_FE, 0),
+               COALESCE(MICRO_ZN, 0),
+               COALESCE(MICRO_MN, 0),
+               COALESCE(MICRO_CU, 0)
+        FROM Plan_Abonado
+        WHERE COD_CAMPO = %s
+          AND EJERCICIO = %s
+        """,
         params,
     )
+
     rows = cursor.fetchall()
-    total_meses = {r[0]: r[1] for r in rows}
+
+    objetivos_meses = {}
+
+    for r in rows:
+        objetivos_meses[r[0]] = {
+            "PH": r[1],
+            "N": r[2],
+            "K": r[3],
+            "CA": r[4],
+            "FE": r[5],
+            "ZN": r[6],
+            "MN": r[7],
+            "CU": r[8],
+        }
 
     cursor.execute(
-        "select CAST(SUBSTR(t.FECHA, 4, 2) AS INTEGER) AS mes, "
-        "SUM("
-        "COALESCE(p.MACRO_PH,0) * t.cant_abonado + "
-        "COALESCE(p.MACRO_N,0) * t.cant_abonado + "
-        "COALESCE(p.MACRO_K,0) * t.cant_abonado + "
-        "COALESCE(p.MACRO_CA,0) * t.cant_abonado + "
-        "COALESCE(p.MICRO_FE,0) * t.cant_abonado + "
-        "COALESCE(p.MICRO_ZN,0) * t.cant_abonado + "
-        "COALESCE(p.MICRO_MN,0) * t.cant_abonado + "
-        "COALESCE(p.MICRO_CU,0) * t.cant_abonado"
-        ") AS gasto "
-        "from Tratamientos t "
-        "join Productos p on t.COD_PRODUCTO = p.COD_PRODUCTO "
-        "where t.COD_CAMPO = %s and CAST(SUBSTR(t.FECHA, -4) AS INTEGER) = %s "
-        "group by mes "
-        "order by mes",
+        """
+        SELECT CAST(SUBSTR(t.FECHA, 4, 2) AS INTEGER) AS mes,
+               SUM(COALESCE(p.MACRO_PH, 0) * t.cant_abonado),
+               SUM(COALESCE(p.MACRO_N, 0) * t.cant_abonado),
+               SUM(COALESCE(p.MACRO_K, 0) * t.cant_abonado),
+               SUM(COALESCE(p.MACRO_CA, 0) * t.cant_abonado),
+               SUM(COALESCE(p.MICRO_FE, 0) * t.cant_abonado),
+               SUM(COALESCE(p.MICRO_ZN, 0) * t.cant_abonado),
+               SUM(COALESCE(p.MICRO_MN, 0) * t.cant_abonado),
+               SUM(COALESCE(p.MICRO_CU, 0) * t.cant_abonado)
+        FROM Tratamientos t
+        JOIN Productos p
+          ON t.COD_PRODUCTO = p.COD_PRODUCTO
+        WHERE t.COD_CAMPO = %s
+          AND CAST(SUBSTR(t.FECHA, -4) AS INTEGER) = %s
+        GROUP BY mes
+        ORDER BY mes
+        """,
         params,
     )
+
     rows = cursor.fetchall()
-    gasto_meses = {r[0]: r[1] for r in rows}
+    aplicado_meses = {}
+
+    for r in rows:
+        aplicado_meses[r[0]] = {
+            "PH": r[1] or 0,
+            "N": r[2] or 0,
+            "K": r[3] or 0,
+            "CA": r[4] or 0,
+            "FE": r[5] or 0,
+            "ZN": r[6] or 0,
+            "MN": r[7] or 0,
+            "CU": r[8] or 0,
+        }
 
     nombres_meses = {
         1: "Enero",
@@ -109,12 +143,43 @@ def get_cumplimiento_total_service(cod_campo):
     }
 
     resultado = []
+
     for mes in range(1, 13):
+
+        objetivos = objetivos_meses.get(mes, {})
+        aplicados = aplicado_meses.get(mes, {})
+
+        nutrientes_planificados = [
+            nutriente
+            for nutriente, objetivo in objetivos.items()
+            if objetivo > 0
+        ]
+
+        cantidad_nutrientes = len(nutrientes_planificados)
+
+        if cantidad_nutrientes == 0:
+            cumplimiento_total = 0
+        else:
+            peso_nutriente = 100 / cantidad_nutrientes
+            cumplimiento_total = 0
+
+            for nutriente in nutrientes_planificados:
+
+                objetivo = objetivos[nutriente]
+                aplicado = aplicados.get(nutriente, 0)
+                porcentaje_nutriente = min(
+                    aplicado / objetivo,
+                    1
+                )
+                cumplimiento_total += (
+                    porcentaje_nutriente * peso_nutriente
+                )
+
         resultado.append(
             {
                 "mes": nombres_meses[mes],
-                "objetivo": total_meses.get(mes, 0),
-                "cumplimiento": gasto_meses.get(mes, 0),
+                "objetivo": 100 if cantidad_nutrientes > 0 else 0,
+                "cumplimiento": round(cumplimiento_total, 2),
             }
         )
 

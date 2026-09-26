@@ -132,13 +132,20 @@ def insert_plan_abonado_service(data):
     cod_campo = data.get("codCampo", "")
 
     try:
+        cursor.execute("""
+            SELECT nextval(
+                pg_get_serial_sequence('plan_abonado', 'cod_abonado')
+            ) AS cod_abonado
+        """)
+
+        cod_abonado = cursor.fetchone()["cod_abonado"]
+    
         sql = """
-            INSERT INTO Plan_Abonado (COD_CAMPO, EJERCICIO, MES, COD_PRODUCTO, cant_abonado,
+            INSERT INTO Plan_Abonado (cod_abonado, COD_CAMPO, EJERCICIO, MES, COD_PRODUCTO, cant_abonado,
                 MACRO_PH, MACRO_N, MACRO_K, MACRO_CA,
                 MICRO_FE, MICRO_ZN, MICRO_MN, MICRO_CU
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING COD_ABONADO
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
 
         sqlProds = """
@@ -187,6 +194,7 @@ def insert_plan_abonado_service(data):
             # ----------------------------------------
 
             params = (
+                cod_abonado,
                 cod_campo,
                 ejer,
                 mes_num,
