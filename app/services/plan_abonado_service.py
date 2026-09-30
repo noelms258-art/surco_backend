@@ -3,7 +3,7 @@ from datetime import datetime
 from decimal import Decimal
 
 
-def get_plan_abonado_service(params):
+def get_plan_abonado_service(cod_campo):
     conn = get_db_connection()
     cursor = conn.cursor()
     meses = [
@@ -21,14 +21,27 @@ def get_plan_abonado_service(params):
         "Diciembre",
     ]
 
-    resultado = {mes: {"nutrientes": {}, "productos": []} for mes in meses}
+    
+    mes_cierre = obtener_mes_cierre(cursor, cod_campo)
+
+    meses_ordenados = meses[mes_cierre:] + meses[:mes_cierre]
+
+    params = (
+        cod_campo,
+        datetime.now().year,
+        mes_cierre,
+        datetime.now().year + 1,
+        mes_cierre,
+    )
+
+    resultado = {mes: {"nutrientes": {}, "productos": []} for mes in meses_ordenados}
 
     cursor.execute(
         "select (CASE MES WHEN 1 THEN 'Enero' WHEN 2 THEN 'Febrero' WHEN 3 THEN 'Marzo' WHEN 4 THEN 'Abril' WHEN 5 THEN 'Mayo' WHEN 6 THEN 'Junio' WHEN 7 THEN 'Julio'"
         " WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Septiembre' WHEN 10 THEN 'Octubre' WHEN 11 THEN 'Noviembre' WHEN 12 THEN 'Diciembre' END) AS MES,"
         " MACRO_PH, MACRO_N, MACRO_K, MACRO_CA, MICRO_FE, MICRO_ZN, MICRO_MN, MICRO_CU"
         " from Plan_Abonado"
-        " where COD_CAMPO = %s and EJERCICIO = %s",
+        " where COD_CAMPO = %s and ((EJERCICIO = %s AND mes > %s) OR (ejercicio = %s and mes <= %s))",
         params,
     )
     rows = cursor.fetchall()
@@ -37,22 +50,22 @@ def get_plan_abonado_service(params):
         mes = r["mes"]
         if mes in resultado:
             resultado[mes]["nutrientes"] = {
-            "fosforo": r["macro_ph"],
-            "nitrogeno": r["macro_n"],
-            "potasio": r["macro_k"],
-            "calcio": r["macro_ca"],
-            "hierro": r["micro_fe"],
-            "zinc": r["micro_zn"],
-            "manganeso": r["micro_mn"],
-            "cobre": r["micro_cu"],
-        }
+                "fosforo": r["macro_ph"],
+                "nitrogeno": r["macro_n"],
+                "potasio": r["macro_k"],
+                "calcio": r["macro_ca"],
+                "hierro": r["micro_fe"],
+                "zinc": r["micro_zn"],
+                "manganeso": r["micro_mn"],
+                "cobre": r["micro_cu"],
+            }
 
     cursor.execute(
         "select (CASE pl.MES WHEN 1 THEN 'Enero' WHEN 2 THEN 'Febrero' WHEN 3 THEN 'Marzo' WHEN 4 THEN 'Abril' WHEN 5 THEN 'Mayo' WHEN 6 THEN 'Junio' WHEN 7 THEN 'Julio'"
         " WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Septiembre' WHEN 10 THEN 'Octubre' WHEN 11 THEN 'Noviembre' WHEN 12 THEN 'Diciembre' END) AS MES , p.NOM_PRODUCTO, pl.cantidad"
         " from Productos_plan pl"
         " join Productos p on p.COD_PRODUCTO = pl.cod_producto"
-        " where pl.COD_CAMPO = %s and pl.EJERCICIO = %s",
+        " where pl.COD_CAMPO = %s and ((pl.EJERCICIO = %s AND pl.mes > %s) OR (pl.ejercicio = %s and pl.mes <= %s))",
         params,
     )
     rows = cursor.fetchall()
@@ -60,7 +73,9 @@ def get_plan_abonado_service(params):
     for r in rows:
         mes = r["mes"]
         if mes in resultado:
-            resultado[mes]["productos"].append({"nomProd": r["nom_producto"], "cant": r["cantidad"]})
+            resultado[mes]["productos"].append(
+                {"nomProd": r["nom_producto"], "cant": r["cantidad"]}
+            )
 
     conn.close()
     return resultado
@@ -132,6 +147,10 @@ def insert_plan_abonado_service(data):
     cod_campo = data.get("codCampo", "")
 
     try:
+        mes_cierre = obtener_mes_cierre(cursor, cod_campo)
+        anio_inicio = datetime.now().year
+        anio_fin = anio_inicio + 1
+
         cursor.execute("""
             SELECT nextval(
                 pg_get_serial_sequence('plan_abonado', 'cod_abonado')
@@ -139,7 +158,7 @@ def insert_plan_abonado_service(data):
         """)
 
         cod_abonado = cursor.fetchone()["cod_abonado"]
-    
+
         sql = """
             INSERT INTO Plan_Abonado (cod_abonado, COD_CAMPO, EJERCICIO, MES, COD_PRODUCTO, cant_abonado,
                 MACRO_PH, MACRO_N, MACRO_K, MACRO_CA,
@@ -164,6 +183,15 @@ def insert_plan_abonado_service(data):
 
             if not mes_num:
                 raise ValueError(f"Mes no válido: {mes}")
+
+            if mes_cierre == 12:
+                ejer = anio_inicio
+
+            elif mes_num > mes_cierre:
+                ejer = anio_inicio
+
+            else:
+                ejer = anio_fin
 
             prods = plan_mes.get("productos", [])
             nutrs = plan_mes.get("nutrientes", {}) or {}
@@ -212,12 +240,6 @@ def insert_plan_abonado_service(data):
 
             cursor.execute(sql, params)
 
-            # Recuperamos el COD_ABONADO recién generado
-            row = cursor.fetchone()
-            cod_abonado = row["cod_abonado"]
-
-            print("COD_ABONADO generado:", cod_abonado)
-
             # ----------------------------------------
             # 2. INSERTAMOS LOS PRODUCTOS
             # ----------------------------------------
@@ -232,8 +254,8 @@ def insert_plan_abonado_service(data):
                     ejer,
                     prod.get("cant"),
                 )
-
-            cursor.execute(sqlProds, paramsProd)
+                
+                cursor.execute(sqlProds, paramsProd)
 
             insertados += 1
 
@@ -256,3 +278,19 @@ def insert_plan_abonado_service(data):
     finally:
         cursor.close()
         conn.close()
+
+
+def obtener_mes_cierre(cursor, cod_campo):
+    cursor.execute(
+        """
+        SELECT mes_cierre FROM explotaciones WHERE cod_campo = %s
+    """,
+        (cod_campo,),
+    )
+
+    row = cursor.fetchone()
+    mes_cierre = row["mes_cierre"]
+    if mes_cierre is None:
+        raise ValueError(f"El campo {cod_campo} no tiene mes de cierre informado")
+
+    return mes_cierre

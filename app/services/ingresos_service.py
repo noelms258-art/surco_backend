@@ -14,7 +14,7 @@ def get_tipo_ingresos():
     finally:
         conn.close()
 
-#Hay que corregir este servicio
+
 def insert_ingresos_service(data, cod_cliente):
     ingresos = data.get("ingresos", [])
 
@@ -47,13 +47,13 @@ def insert_ingresos_service(data, cod_cliente):
                 cod_campo = ingreso.get("codCampo")
 
             if "K" in tip_cobro:
-                kg_ingreso = float(ingreso.get("txtKgs") or 0)
-                imp_ingreso = float(ingreso.get("txtImpKgs") or 0)
+                kg_ingreso = float(str(ingreso.get("txtKgs") or 0).replace(",", "."))
+                imp_ingreso = float(str(ingreso.get("txtImpKgs") or 0).replace(",", "."))
                 total_bruto = kg_ingreso * imp_ingreso
             elif "H" in tip_cobro:
-                total_bruto = float(ingreso.get("txtHoras") or 0) * float(ingreso.get("txtImpHoras") or 0)
+                total_bruto = float(str(ingreso.get("txtHoras") or 0).replace(",", ".")) * float(str(ingreso.get("txtImpHoras") or 0).replace(",", "."))
             elif "I" in tip_cobro:
-                total_bruto = float(ingreso.get("txtImporte") or 0)
+                total_bruto = float(str(ingreso.get("txtImporte") or 0).replace(",", "."))
             
             params.append(
                 (

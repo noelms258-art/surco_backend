@@ -17,7 +17,7 @@ def get_campos_by_user(cod_cliente):
               AND pl.ejercicio = %s
             ) THEN 1
             ELSE 0
-            END AS TIENE_PLAN
+            END AS TIENE_PLAN, t.mes_cierre
             FROM explotaciones t, cultivo f, explotaciones_cultivos ec
             WHERE f.cod_fruta = ec.cod_fruta and t.cod_campo = ec.cod_campo and t.cod_cliente = %s
             GROUP BY t.cod_campo, t.nom_campo, t.superficie
@@ -28,7 +28,7 @@ def get_campos_by_user(cod_cliente):
 
         return [
             {"codCampo": row["cod_campo"], "nomCampo": row["nom_campo"], "tamaño": row["superficie"],
-            "numArboles": row["num_arboles"], "nomFruta": row["nom_fruta"], "tienePlan": row["tiene_plan"]} for row in rows
+            "numArboles": row["num_arboles"], "nomFruta": row["nom_fruta"], "tienePlan": row["tiene_plan"], "mesCierre": row["mes_cierre"]} for row in rows
         ]
     finally:
         conn.close()

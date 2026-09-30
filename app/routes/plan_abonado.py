@@ -10,8 +10,7 @@ plan_abonado_bp = Blueprint("planAbonado", __name__, url_prefix="/surco")
 @plan_abonado_bp.route("/planAbonado", methods=["GET"])
 @jwt_required()
 def get_plan_abonado():
-    params = (request.args.get("codCampo"), datetime.now().year)
-    result = get_plan_abonado_service(params)
+    result = get_plan_abonado_service(request.args.get("codCampo"))
     return jsonify(result)
 
 @plan_abonado_bp.route("/planAbonado", methods=["POST"])

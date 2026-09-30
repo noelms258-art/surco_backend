@@ -2,6 +2,8 @@ from app import create_app
 
 app = create_app()
 
+app.json.sort_keys = False
+
 print("========= RUTAS FLASK =========", flush=True)
 
 for rule in app.url_map.iter_rules():
