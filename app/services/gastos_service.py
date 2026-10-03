@@ -22,6 +22,8 @@ def insert_gastos_agricolas(data, cod_cliente):
             if gasto.get("codProd") is None:
                 raise ValueError("Cada gasto debe tener un producto")
 
+            print("FECHA RECIBIDA:", gasto.get("fechaGast"))
+
             params.append(
                 (
                     gasto.get("codProd"),

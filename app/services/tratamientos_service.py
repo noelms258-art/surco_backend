@@ -32,7 +32,7 @@ def insert_tratamientos_service(tratamientos, campo, cod_cliente):
                     trat.get("codProd"),
                     float(trat.get("cantTrat")),
                     campo,
-                    fecha_formateada,
+                    trat.get("fechaTrat"),
                     cod_cliente
                 )
             )

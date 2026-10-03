@@ -15,8 +15,9 @@ def get_user_campos():
     return jsonify(campos)
 
 
-@usuarios_bp.route("/<user_name>/empleados", methods=["GET"])
+@usuarios_bp.route("/terceros", methods=["GET"])
 @jwt_required()
-def get_empleados(user_name):
-    empleados = get_empleados_by_user(user_name)
-    return jsonify(empleados)
+def get_empleados():
+    cod_cliente = get_jwt_identity()
+    terceros = get_empleados_by_user(cod_cliente)
+    return jsonify(terceros)

@@ -1,4 +1,5 @@
 from app.db import get_db_connection
+from datetime import datetime
 
 
 def get_productos_by_tipo(clas_prod):
@@ -38,12 +39,12 @@ def get_clases_producto():
 
 def get_producto_user_service(cod_cliente):
     conn = get_db_connection()
-    params = (cod_cliente,)
+    params = (cod_cliente, datetime.now().year,)
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT gp.COD_PRODUCTO, p.NOM_PRODUCTO, sum(gp.unidades) as unidades  FROM gastos_cliente gp, Productos p WHERE gp.cod_producto = p.cod_producto "
-            "AND gp.cod_cliente = %s AND gp.unidades >= 1 GROUP BY gp.COD_PRODUCTO, p.NOM_PRODUCTO"
+            "SELECT gp.COD_PRODUCTO, p.NOM_PRODUCTO, sum(gp.unidades_prod) as unidades  FROM gastos_productos gp, Productos p WHERE gp.cod_producto = p.cod_producto "
+            "AND gp.cod_cliente = %s AND p.sub_tip_producto = 'ABONO - FERTILIZANTE'  AND EXTRACT(YEAR FROM gp.fec_compra) = %s GROUP BY gp.COD_PRODUCTO, p.nom_producto HAVING SUM(gp.unidades_prod) >= 1"
         , params)
         rows = cursor.fetchall()
 

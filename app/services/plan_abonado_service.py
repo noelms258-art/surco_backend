@@ -2,6 +2,9 @@ from app.db import get_db_connection
 from datetime import datetime
 from decimal import Decimal
 
+from app.utils.utils import obtener_mes_cierre
+
+
 
 def get_plan_abonado_service(cod_campo):
     conn = get_db_connection()
@@ -21,7 +24,6 @@ def get_plan_abonado_service(cod_campo):
         "Diciembre",
     ]
 
-    
     mes_cierre = obtener_mes_cierre(cursor, cod_campo)
 
     meses_ordenados = meses[mes_cierre:] + meses[:mes_cierre]
@@ -62,7 +64,7 @@ def get_plan_abonado_service(cod_campo):
 
     cursor.execute(
         "select (CASE pl.MES WHEN 1 THEN 'Enero' WHEN 2 THEN 'Febrero' WHEN 3 THEN 'Marzo' WHEN 4 THEN 'Abril' WHEN 5 THEN 'Mayo' WHEN 6 THEN 'Junio' WHEN 7 THEN 'Julio'"
-        " WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Septiembre' WHEN 10 THEN 'Octubre' WHEN 11 THEN 'Noviembre' WHEN 12 THEN 'Diciembre' END) AS MES , p.NOM_PRODUCTO, pl.cantidad"
+        " WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Septiembre' WHEN 10 THEN 'Octubre' WHEN 11 THEN 'Noviembre' WHEN 12 THEN 'Diciembre' END) AS MES, p.cod_producto , p.NOM_PRODUCTO, pl.cantidad"
         " from Productos_plan pl"
         " join Productos p on p.COD_PRODUCTO = pl.cod_producto"
         " where pl.COD_CAMPO = %s and ((pl.EJERCICIO = %s AND pl.mes > %s) OR (pl.ejercicio = %s and pl.mes <= %s))",
@@ -74,7 +76,7 @@ def get_plan_abonado_service(cod_campo):
         mes = r["mes"]
         if mes in resultado:
             resultado[mes]["productos"].append(
-                {"nomProd": r["nom_producto"], "cant": r["cantidad"]}
+                {"codProd": r["cod_producto"], "nomProd": r["nom_producto"], "cant": r["cantidad"]}
             )
 
     conn.close()
@@ -151,13 +153,15 @@ def insert_plan_abonado_service(data):
         anio_inicio = datetime.now().year
         anio_fin = anio_inicio + 1
 
-        cursor.execute("""
-            SELECT nextval(
-                pg_get_serial_sequence('plan_abonado', 'cod_abonado')
-            ) AS cod_abonado
-        """)
+        cod_abonado = eliminar_plan_abonado(cursor, cod_campo, mes_cierre, anio_inicio, anio_fin)
 
-        cod_abonado = cursor.fetchone()["cod_abonado"]
+        if cod_abonado is None:
+            cursor.execute("""
+                SELECT nextval(
+                    pg_get_serial_sequence('plan_abonado', 'cod_abonado')
+                ) AS cod_abonado
+            """)
+            cod_abonado = cursor.fetchone()["cod_abonado"]
 
         sql = """
             INSERT INTO Plan_Abonado (cod_abonado, COD_CAMPO, EJERCICIO, MES, COD_PRODUCTO, cant_abonado,
@@ -254,7 +258,7 @@ def insert_plan_abonado_service(data):
                     ejer,
                     prod.get("cant"),
                 )
-                
+
                 cursor.execute(sqlProds, paramsProd)
 
             insertados += 1
@@ -280,17 +284,32 @@ def insert_plan_abonado_service(data):
         conn.close()
 
 
-def obtener_mes_cierre(cursor, cod_campo):
+def eliminar_plan_abonado(cursor, cod_campo, mes_cierre, anio_inicio, anio_fin):
     cursor.execute(
         """
-        SELECT mes_cierre FROM explotaciones WHERE cod_campo = %s
-    """,
-        (cod_campo,),
+            SELECT DISTINCT cod_abonado FROM plan_abonado WHERE cod_campo = %s AND ((ejercicio = %s AND mes > %s) OR (ejercicio = %s AND mes <= %s))
+        """,
+        (cod_campo, anio_inicio, mes_cierre, anio_fin, mes_cierre),
     )
 
     row = cursor.fetchone()
-    mes_cierre = row["mes_cierre"]
-    if mes_cierre is None:
-        raise ValueError(f"El campo {cod_campo} no tiene mes de cierre informado")
 
-    return mes_cierre
+    if not row:
+        return None
+    
+    cod_abonado = row["cod_abonado"]
+
+    cursor.execute(
+        """
+            DELETE FROM productos_plan WHERE cod_abonado = %s and cod_campo = %s
+        """,
+        (cod_abonado, cod_campo),
+    )
+
+    cursor.execute("""
+            DELETE FROM plan_abonado WHERE cod_abonado = %s AND cod_campo = %s
+        """,
+        (cod_abonado, cod_campo)
+    )
+
+    return cod_abonado

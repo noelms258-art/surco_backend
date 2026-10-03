@@ -54,6 +54,9 @@ def insert_ingresos_service(data, cod_cliente):
                 total_bruto = float(str(ingreso.get("txtHoras") or 0).replace(",", ".")) * float(str(ingreso.get("txtImpHoras") or 0).replace(",", "."))
             elif "I" in tip_cobro:
                 total_bruto = float(str(ingreso.get("txtImporte") or 0).replace(",", "."))
+
+            imp_iva = total_bruto * (float(str(ingreso.get("iva") or 0).replace(",", ".")) / 100)
+            total_neto = total_bruto - imp_iva
             
             params.append(
                 (
@@ -62,8 +65,8 @@ def insert_ingresos_service(data, cod_cliente):
                     kg_ingreso,
                     imp_ingreso if imp_ingreso is not None else total_bruto,
                     total_bruto,
-                    None,
-                    None,
+                    imp_iva,
+                    total_neto,
                     ingreso.get("fecIngreso"),
                     None,
                     None,

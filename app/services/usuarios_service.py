@@ -34,7 +34,7 @@ def get_campos_by_user(cod_cliente):
         conn.close()
 
 
-def get_empleados_by_user(user_name):
+def get_empleados_by_user(cod_cliente):
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -47,9 +47,9 @@ def get_empleados_by_user(user_name):
                     FROM Usuarios us
                     WHERE t.COD_TERCERO = us.cod_cliente
                 ) AS NOM_CLIENTE
-            FROM Terceros t, Usuarios u WHERE t.cod_cliente = u.cod_cliente and u.EMAIL = %s
+            FROM Terceros t, Usuarios u WHERE u.cod_cliente = %s
             """,
-            (user_name,),
+            (cod_cliente,),
         )
         rows = cursor.fetchall()
 

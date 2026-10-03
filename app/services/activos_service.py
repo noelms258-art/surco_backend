@@ -64,3 +64,23 @@ def insert_activos_servicio(data, cod_cliente):
         raise
     finally:
         conn.close()
+
+
+def get_activos_cliente(cod_cliente):
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+                SELECT COD_ACTIVO, nom_activo FROM activos_clientes WHERE cod_cliente = %s
+            """,
+            (cod_cliente,)
+        )
+        rows = cursor.fetchall()
+    
+        return [
+            {"codActivo": row["cod_activo"], "nomActivo": row["nom_activo"]}
+            for row in rows
+        ]
+    finally:
+        conn.close()
