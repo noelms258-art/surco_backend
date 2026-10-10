@@ -43,11 +43,11 @@ def get_producto_user_service(cod_cliente):
     try:
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT gp.COD_PRODUCTO, p.NOM_PRODUCTO, sum(gp.unidades_prod) as unidades  FROM gastos_productos gp, Productos p WHERE gp.cod_producto = p.cod_producto "
+            "SELECT gp.cod_gasto_prod, gp.COD_PRODUCTO, p.NOM_PRODUCTO, sum(gp.unidades_prod) as unidades  FROM gastos_productos gp, Productos p WHERE gp.cod_producto = p.cod_producto "
             "AND gp.cod_cliente = %s AND p.sub_tip_producto = 'ABONO - FERTILIZANTE'  AND EXTRACT(YEAR FROM gp.fec_compra) = %s GROUP BY gp.COD_PRODUCTO, p.nom_producto HAVING SUM(gp.unidades_prod) >= 1"
         , params)
         rows = cursor.fetchall()
 
-        return [{"nomProd": row["nom_producto"], "codProd": row["cod_producto"], "cantidad": row["unidades"]} for row in rows]
+        return [{"codGasto": row["cod_gasto_prod"], "nomProd": row["nom_producto"], "codProd": row["cod_producto"], "cantidad": row["unidades"]} for row in rows]
     finally:
         conn.close()

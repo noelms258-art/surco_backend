@@ -28,7 +28,7 @@ def insert_tratamientos_service(tratamientos, campo, cod_cliente):
 
             params.append(
                 (
-                    None,
+                    trat.get("codGasto"),
                     trat.get("codProd"),
                     float(trat.get("cantTrat")),
                     campo,

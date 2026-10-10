@@ -198,7 +198,7 @@ def insert_plan_abonado_service(data):
                 ejer = anio_fin
 
             prods = plan_mes.get("productos", [])
-            nutrs = plan_mes.get("nutrientes", {}) or {}
+            nutrs_manual = plan_mes.get("nutrientes", {}) or {}
 
             nutrientes_vacios = all(
                 nutrs.get(k) in (None, "", 0)
@@ -218,13 +218,23 @@ def insert_plan_abonado_service(data):
                 continue
 
             # Si no vienen nutrientes pero sí productos, los calculamos
-            if nutrientes_vacios and len(prods) > 0:
-                nutrs = calcular_nutrientes_desde_productos(cursor, prods)
+            if len(prods) > 0:
+                nutrs_prod = calcular_nutrientes_desde_productos(cursor, prods)
+
+            nutrs = {
+                "fosforo": (nutrs_manual.get("fosforo") or 0) + (nutrs_prod.get("fosforo") or 0),
+                "nitrogeno": (nutrs_manual.get("nitrogeno") or 0) + (nutrs_prod.get("nitrogeno") or 0),
+                "potasio": (nutrs_manual.get("potasio") or 0) + (nutrs_prod.get("potasio") or 0),
+                "calcio": (nutrs_manual.get("calcio") or 0) + (nutrs_prod.get("calcio") or 0),
+                "hierro": (nutrs_manual.get("hierro") or 0) + (nutrs_prod.get("hierro") or 0),
+                "zinc": (nutrs_manual.get("zinc") or 0) + (nutrs_prod.get("zinc") or 0),
+                "manganeso": (nutrs_manual.get("manganeso") or 0) + (nutrs_prod.get("manganeso") or 0),
+                "cobre": (nutrs_manual.get("cobre") or 0) + (nutrs_prod.get("cobre") or 0),
+            }
 
             # ----------------------------------------
             # 1. INSERTAMOS PLAN_ABONADO
             # ----------------------------------------
-
             params = (
                 cod_abonado,
                 cod_campo,

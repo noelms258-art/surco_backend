@@ -242,25 +242,25 @@ def get_cumplimiento_macros_service(cod_campo):
         """
         SELECT
             pl.MACRO_PH,
-            COALESCE(SUM(COALESCE(p.MACRO_PH, 0) * COALESCE(t.cant_abonado, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MACRO_PH, 0) * COALESCE(t.cant_trata, 0)), 0) AS cumpl_ph,
             pl.MACRO_N,
-            COALESCE(SUM(COALESCE(p.MACRO_N, 0) * COALESCE(t.cant_abonado, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MACRO_N, 0) * COALESCE(t.cant_trata, 0)), 0) AS cumpl_n,
             pl.MACRO_K,
-            COALESCE(SUM(COALESCE(p.MACRO_K, 0) * COALESCE(t.cant_abonado, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MACRO_K, 0) * COALESCE(t.cant_trata, 0)), 0) AS cumpl_k,
             pl.MACRO_CA,
-            COALESCE(SUM(COALESCE(p.MACRO_CA, 0) * COALESCE(t.cant_abonado, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MACRO_CA, 0) * COALESCE(t.cant_trata, 0)), 0) AS cumpl_ca,
             pl.MICRO_FE,
-            COALESCE(SUM(COALESCE(p.MICRO_FE, 0) * COALESCE(t.cant_abonado, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MICRO_FE, 0) * COALESCE(t.cant_trata, 0)), 0) AS cumpl_fe,
             pl.MICRO_ZN,
-            COALESCE(SUM(COALESCE(p.MICRO_ZN, 0) * COALESCE(t.cant_abonado, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MICRO_ZN, 0) * COALESCE(t.cant_trata, 0)), 0) AS cumpl_zn,
             pl.MICRO_MN,
-            COALESCE(SUM(COALESCE(p.MICRO_MN, 0) * COALESCE(t.cant_abonado, 0)), 0),
+            COALESCE(SUM(COALESCE(p.MICRO_MN, 0) * COALESCE(t.cant_trata, 0)), 0) AS cumpl_mn,
             pl.MICRO_CU,
-            COALESCE(SUM(COALESCE(p.MICRO_CU, 0) * COALESCE(t.cant_abonado, 0)), 0)
+            COALESCE(SUM(COALESCE(p.MICRO_CU, 0) * COALESCE(t.cant_trata, 0)), 0) AS cumpl_cu 
         FROM Plan_Abonado pl
         LEFT JOIN Tratamientos t ON t.COD_CAMPO = pl.COD_CAMPO
-            AND CAST(SUBSTR(t.fec_trata, 4, 2) AS INTEGER) = %s
-            AND CAST(SUBSTR(t.fec_trata, -4) AS INTEGER) = %s
+            AND EXTRACT(MONTH FROM t.fec_trata) = %s
+            AND EXTRACT(YEAR FROM t.fec_trata) = %s
         LEFT JOIN Productos p ON t.COD_PRODUCTO = p.COD_PRODUCTO
         WHERE pl.COD_CAMPO = %s
             AND pl.EJERCICIO = %s
@@ -284,14 +284,14 @@ def get_cumplimiento_macros_service(cod_campo):
         return {"macros_anuales": {}}
 
     macros_anuales = {
-        "macroP": {"objetivo": row[0] or 0, "cumplimiento": row[1] or 0},
-        "macroN": {"objetivo": row[2] or 0, "cumplimiento": row[3] or 0},
-        "macroK": {"objetivo": row[4] or 0, "cumplimiento": row[5] or 0},
-        "macroCa": {"objetivo": row[6] or 0, "cumplimiento": row[7] or 0},
-        "microFe": {"objetivo": row[8] or 0, "cumplimiento": row[9] or 0},
-        "microZn": {"objetivo": row[10] or 0, "cumplimiento": row[11] or 0},
-        "microMn": {"objetivo": row[12] or 0, "cumplimiento": row[13] or 0},
-        "microCu": {"objetivo": row[14] or 0, "cumplimiento": row[15] or 0},
+        "macroP": {"objetivo": row["macro_ph"] or 0, "cumplimiento": row["cumpl_ph"] or 0},
+        "macroN": {"objetivo": row["macro_n"] or 0, "cumplimiento": row["cumpl_n"] or 0},
+        "macroK": {"objetivo": row["macro_k"] or 0, "cumplimiento": row["cumpl_k"] or 0},
+        "macroCa": {"objetivo": row["macro_ca"] or 0, "cumplimiento": row["cumpl_ca"] or 0},
+        "microFe": {"objetivo": row["micro_fe"] or 0, "cumplimiento": row["cumpl_fe"] or 0},
+        "microZn": {"objetivo": row["micro_zn"] or 0, "cumplimiento": row["cumpl_zn"] or 0},
+        "microMn": {"objetivo": row["micro_mn"] or 0, "cumplimiento": row["cumpl_mn"] or 0},
+        "microCu": {"objetivo": row["micro_cu"] or 0, "cumplimiento": row["cumpl_cu"] or 0},
     }
 
     filtrado = {k: v for k, v in macros_anuales.items() if v["objetivo"] > 0}
@@ -317,13 +317,13 @@ def get_cumplimiento_productos_service(cod_campo):
             pp.cod_producto,
             p.NOM_PRODUCTO,
             pp.CANTIDAD AS OBJETIVO,
-            COALESCE(SUM(t.CANTIDAD), 0) AS CUMPLIMIENTO
+            COALESCE(SUM(t.cant_trata), 0) AS CUMPLIMIENTO
         FROM Productos_plan pp
         JOIN Productos p ON p.COD_PRODUCTO = pp.cod_producto
         LEFT JOIN Tratamientos t ON t.COD_CAMPO = pp.COD_CAMPO
             AND t.COD_PRODUCTO = pp.cod_producto
-            AND CAST(SUBSTR(t.fec_trata, 4, 2) AS INTEGER) = %s
-            AND CAST(SUBSTR(t.fec_trata, -4) AS INTEGER) = %s
+            AND EXTRACT(MONTH FROM t.fec_trata) = %s
+            AND EXTRACT(YEAR FROM t.fec_trata) = %s
         WHERE pp.COD_CAMPO = %s
             AND pp.EJERCICIO = %s
             AND pp.MES = %s
@@ -339,10 +339,10 @@ def get_cumplimiento_productos_service(cod_campo):
 
     productos = [
         {
-            "codProd": r[0],
-            "nomProd": r[1],
-            "objetivo": r[2] or 0,
-            "cumplimiento": r[3] or 0,
+            "codProd": r["cod_producto"],
+            "nomProd": r["nom_producto"],
+            "objetivo": r["objetivo"] or 0,
+            "cumplimiento": r["cumplimiento"] or 0,
         }
         for r in rows
     ]
